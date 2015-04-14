@@ -2,4 +2,7 @@
 /images
 /labels
 /Videos
+*.sw*
 
+# Exept
+!/Videos/exampleFolder
