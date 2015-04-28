@@ -281,8 +281,8 @@ function processVideo(v_class, vid)
                         img_win.stroke(win)
                         xOld = x
                         yOld = y
-                        labelFileID:write(string.format('%s-%04d.png,%d,%d,%d,%d\n', name, f, x, y, width, height));
-	                image.savePNG(string.format('../images/' .. v_class .. '/%s-%04d.png', vid, f), dst)
+                        labelFileID:write(string.format('%s-%04d.png,%d,%d,%d,%d\n', vid, f, x, y, width, height));
+                        image.savePNG(string.format('../images/' .. v_class .. '/%s-%04d.png', vid, f), dst)
                         qt.doevents()
                         if (reset == 1) then
                            ui.frame_2.can_label.text = 'Please specify the new rectangle.'

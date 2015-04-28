@@ -143,6 +143,9 @@ end
 ui = qtuiloader.load('../GUI/vid2img.ui')
 win = qt.QtLuaPainter(ui.frame_2.canvas)
 win2 = qt.QtLuaPainter(ui.canvas_2)
+win_logo = qt.QtLuaPainter(ui.logo)
+logo = image.scale(image.load('../GUI/logo.jpg'), 70, 70)
+img_logo = image.display{image = logo, win = win_logo}
 qt.connect(qt.QtLuaListener(ui.frame.button_pause), 'sigMousePress(int,int,QByteArray,QByteArray,QByteArray)', ui_pause)
 qt.connect(qt.QtLuaListener(ui.frame.button_skip), 'sigMousePress(int,int,QByteArray,QByteArray,QByteArray)', ui_skip)
 qt.connect(qt.QtLuaListener(ui.frame.button_reset), 'sigMousePress(int,int,QByteArray,QByteArray,QByteArray)', ui_reset)
