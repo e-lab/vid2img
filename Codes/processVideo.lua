@@ -143,7 +143,7 @@ function processVideo(v_class, vid)
       if (f > 0) then
          win:gbegin()
       end
-      dst_bk = dst
+      dst_bk = dst:clone()
       dst = image.scale(dst, 640, 360)
       img_win = image.display{image = dst, win = win}
       qt.doevents()
@@ -286,7 +286,7 @@ function processVideo(v_class, vid)
                         xOld = x
                         yOld = y
                         labelFileID:write(string.format('%s-%04d.png,%d,%d,%d,%d\n', vid, f, torch.round(x*xRatio), torch.round(y*yRatio), torch.round((x2 - x1)*xRatio), torch.round((y2 - y1)*yRatio)));
-                        image.save(string.format('../images/' .. v_class .. '/%s-%04d.png', vid, f), dst_bk)
+                        image.save(string.format('../images/' .. v_class .. '/%s-%04d.png', vid, f), dst_bk:float()/dst_bk:max())
                         qt.doevents()
                         if (reset == 1) then
                            ui.frame_2.can_label.text = 'Please specify the new rectangle.'
