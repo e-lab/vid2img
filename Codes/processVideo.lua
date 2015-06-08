@@ -32,13 +32,12 @@ function findMatch(xOld, yOld)
       out_pic = 1
       return 0, 0
    end
-
    if execu == 1 then
       SAD = torch.FloatTensor(2*Delta+1, 2*Delta+1)
       for i = yOld-Delta, yOld+Delta do
          for j = xOld-Delta, xOld+Delta do
             -- sum function
-            SAD[i-yOld+Delta+1][j-xOld+Delta+1] = (dst[{{}, {i, i+y2-y1}, {j, j+x2-x1}}] - patch):abs():sum()
+            SAD[i-yOld+Delta+1][j-xOld+Delta+1] = ((dst[{{}, {i, i+y2-y1}, {j, j+x2-x1}}]):long() - patch:long()):abs():sum()
          end
       end
       win2 = image.display{image = image.y2jet(SAD:clone():mul(255/SAD:max()):add(1)), win = win2, zoom = 4}
@@ -130,10 +129,13 @@ function processVideo(v_class, vid)
    -- video parameters --
    local nb_frames = length
    -- Process for every frame
-   blank_dst = torch.FloatTensor(3, height, width)
+   blank_dst = torch.ByteTensor(3, height, width)
+   -- Scales
    for f = 0, nb_frames do -- Define video
-      dst = torch.FloatTensor(3, height, width)
+      dst = torch.ByteTensor(3, height, width)
       video_decoder.frame_rgb(dst)
+      xRatio = dst:size()[2]/360.0
+      yRatio = dst:size()[3]/640.0
       -- Set horizontal slider and label
       ui.frame_2.progslide:setValue((f + 1)/nb_frames*100)
       ui.frame_2.framenum:setText('Current frame: ' .. (f+1) .. '/' .. nb_frames)
@@ -141,6 +143,8 @@ function processVideo(v_class, vid)
       if (f > 0) then
          win:gbegin()
       end
+      dst_bk = dst
+      dst = image.scale(dst, 640, 360)
       img_win = image.display{image = dst, win = win}
       qt.doevents()
       if (f == 0) then
@@ -281,8 +285,8 @@ function processVideo(v_class, vid)
                         img_win.stroke(win)
                         xOld = x
                         yOld = y
-                        labelFileID:write(string.format('%s-%04d.png,%d,%d,%d,%d\n', vid, f, x, y, width, height));
-                        image.savePNG(string.format('../images/' .. v_class .. '/%s-%04d.png', vid, f), dst)
+                        labelFileID:write(string.format('%s-%04d.png,%d,%d,%d,%d\n', vid, f, torch.round(x*xRatio), torch.round(y*yRatio), torch.round((x2 - x1)*xRatio), torch.round((y2 - y1)*yRatio)));
+                        image.save(string.format('../images/' .. v_class .. '/%s-%04d.png', vid, f), dst_bk)
                         qt.doevents()
                         if (reset == 1) then
                            ui.frame_2.can_label.text = 'Please specify the new rectangle.'
