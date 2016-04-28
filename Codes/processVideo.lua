@@ -17,7 +17,7 @@ video_decoder = require('libvideo_decoder')
 -- Sub-Fuction definition ------------------------------------------
 function VideoRead(videoPath)
    -- By Alf's test-frame.lua --------------------------------------
-   io.write(videoPath .. '\n')
+   io.write('+ ' .. videoPath .. '\n')
    status, height, width, length, fps =  video_decoder.init(videoPath)
 end
 
@@ -310,5 +310,5 @@ function processVideo(v_class, vid)
    video_decoder.exit()
    -- close file
    labelFileID.close()
-   io.write(' + + + Processing completed succesfully')
+   io.write(' + + Processing completed successfully\n')
 end
