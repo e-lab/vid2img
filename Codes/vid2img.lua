@@ -29,8 +29,10 @@ function getFilesName(pathName)
    list = {}
    i = 0
    for name in io.popen('ls ' .. pathName):lines() do
-      i = i + 1
-      list[i] = name
+      if name ~= 'exampleFolder' then
+         i = i + 1
+         list[i] = name
+      end
    end
    return list
 end
