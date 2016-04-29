@@ -25,9 +25,10 @@ require 'xlua'
 if not opt then
    print '==> Parsing the command line'
    opt = lapp [[
---classes  (default ask)  list the classes you'd like to load, or choose <all>
---nbImgs   (default 1000) number of patches
---outSize  (default 224)  output size of patches
+--classes  (default ask)        list the classes you'd like to load, or choose <all>
+--nbImgs   (default 1000)       number of patches
+--outSize  (default 224)        output size of patches
+--outDir   (default ../Patches) ouput folder for patches
 ]]
 end
 
@@ -62,7 +63,7 @@ function cropPatch(class, l)
    end
 
    -- Create output folder
-   local outDir = '../../train-net-classifier/data/' .. class
+   local outDir = opt.outDir .. class
    paths.mkdir(outDir)
 
    -- Extracting dataset images from dumpend video's frames
