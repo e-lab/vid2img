@@ -4,6 +4,7 @@
 -- This version is used for the interface of lua version vid2img
 -- See README for more information
 -- Jarvis Du
+-- Alfredo Canziani, Apr 16
 --------------------------------------------------------------------------------
 
 -- Early version statement below
@@ -20,47 +21,19 @@ require 'sys'
 require 'image'
 require 'xlua'
 
--- Title -----------------------------------------------------------------------
-print [[
-********************************************************************************
->>>>>>>>>>>>>>>>>> Loading myDataset built with Matlab <<<<<<<<<<<<<<<<<<<<<<<<<
-********************************************************************************
-]]
-
 -- Parsing the command line ----------------------------------------------------
 if not opt then
    print '==> Parsing the command line'
    opt = lapp [[
--w, --width    (default 46)   width of dataset's images
--h, --height   (default 46)   height of the dataset's images
--c, --classes  (default ask)  list the classes you'd like to load, or choose <all>
-    --trSize   (default 750)  number of each dataset's category training samples
-    --teSize   (default 250)  number of each dataset's category testing samples
-    --plot     (default true) show or not some graphical output
+--classes  (default ask)  list the classes you'd like to load, or choose <all>
+--nbImgs   (default 1000) number of patches
+--outSize  (default 224)  output size of patches
 ]]
-end
-
--- Parameters ------------------------------------------------------------------
-opt = opt or {}
-local width = opt.width or 46
-local height = opt.height or 46
-local classes = opt.classes or 'ask' -- 'all'
-local trSize = opt.trSize or 1555 -- == 12440 (siftflow) / 8 (categories)
-local teSize = opt.teSize or 625  -- == 5000  (siftflow) / 8 (categories)
-
--- Function definition ---------------------------------------------------------
--- Cat together two Tensors, even if one variable is nill
-function cat(a,b)
-   if a and b then
-      return torch.cat(a,b,1)
-   else
-      return a or b
-   end
 end
 
 -- The classical <ls> function, outputs table
 function ls(path)
-   return sys.split(sys.ls(path),'\n')
+   return sys.split(sys.ls(path), '\n')
 end
 
 -- A Gaussian distributed random variable
@@ -69,29 +42,14 @@ function math.randn()
 end
 
 -- Loads the dataset specified
-function loadDataset(class, l, totalTrainData, totalTestData, myClasses)
+function cropPatch(class, l)
    print('==> Loading class ' .. class)
-   table.insert(myClasses, class)
-   print('==> Allocating RAM space for category #' .. tostring(l))
-
-   -- Allocating RAM for datset
-   local trainData = {
-      data = torch.Tensor(trSize, 3, height, width),
-      labels = torch.zeros(trSize) + l - 1,
-      -- size = function() return trSize end
-      }
-   local testData = {
-      data = torch.Tensor(teSize, 3, height, width),
-      labels = torch.zeros(teSize) + l - 1,
-      -- size = function() return teSize end
-      }
-   local data = torch.Tensor(trSize+teSize, 3, height, width)
 
    -- Gathering information about the dataset's images
    print '==> Loading labels'
    local images = {} -- Images information: name, x, y, w, h
    local availableIstances = ls('../labels/' .. class)
-   for _,labelFile in ipairs(availableIstances) do
+   for _, labelFile in ipairs(availableIstances) do
       print('     + from ' .. labelFile)
       local fileID = io.open('../labels/' .. class .. '/' .. labelFile)
       local line
@@ -103,23 +61,24 @@ function loadDataset(class, l, totalTrainData, totalTestData, myClasses)
       fileID:close()
    end
 
+   -- Create output folder
+   local outDir = '../../train-net-classifier/data/' .. class
+   paths.mkdir(outDir)
+
    -- Extracting dataset images from dumpend video's frames
    print '==> Extracting training and testing samples'
-   print('     + Minor side resized to 256px')
-   print('     + Patch size ' .. width .. 'x' .. height)
-   local std = 2
-   print('     + 0-mean ' .. std .. '-std Gaussian noise on patch location')
-   local fullBatches = math.floor((trSize + teSize) / #images)
+   local std = 10
+   local fullBatches = math.floor(opt.nbImgs / #images)
    local batch = 0
    local idx
-   for n = 1, (trSize + teSize) do
-      xlua.progress(n, trSize + teSize)
+   for n = 1, opt.nbImgs do
+      xlua.progress(n, opt.nbImgs)
 
       -- Batches management
       if batch < fullBatches then
          idx = n - batch * #images
       else
-         idx = 1 + math.floor((#images - 1)/(trSize + teSize - 1 - fullBatches * #images) * (n - fullBatches * #images - 1) + .5)
+         idx = 1 + math.floor((#images - 1)/(opt.nbImgs - 1 - fullBatches * #images) * (n - fullBatches * #images - 1) + .5)
       end
       if n % #images == 0 then batch = batch + 1 end
 
@@ -133,91 +92,55 @@ function loadDataset(class, l, totalTrainData, totalTestData, myClasses)
       local imgH = (#img)[2]
       local imgW = (#img)[3]
       -- print(imgH,imgW) -- DEBUG
-      img = image.scale(img, '^256') -- minor edge resized to 256
-      local s = 256 / math.min(imgH,imgW)
+      local s = 1
       local x = math.floor(images[idx][2] * s + math.randn() * std + .5)
       local y = math.floor(images[idx][3] * s + math.randn() * std + .5)
-      local w = math.floor(images[idx][4] * s + .5)
-      local h = math.floor(images[idx][5] * s + .5)
+      local w = math.floor(images[idx][4] * s + math.randn() * std + .5)
+      local h = math.floor(images[idx][5] * s + math.randn() * std + .5)
       -- print(s,x,y,w,h) -- DEBUG
+
+      local width = math.max(w, h)
+      local height = width
 
       -- Computing cropping coordinates
       local xA = x + math.floor(w/2) - math.floor(width/2)
       local xB = x + math.floor(w/2) + math.floor(width/2)
       local yA = y + math.floor(h/2) - math.floor(height/2)
       local yB = y + math.floor(h/2) + math.floor(height/2)
-      -- print(xA,xB,yA,yB,xB-xA+1,yB-yA+1) -- DEBUG
+      --print(xA,xB,yA,yB,xB-xA+1,yB-yA+1) -- DEBUG
 
       if xA < 0 then xA = 0; xB = width end
       if yA < 0 then yA = 0; yB = height end
-      if xB > 256 then xB = 256; xA = 256 - width end
-      if yB > 256 then yB = 256; yA = 256 - height end
+      if xB > imgW then xB = imgW; xA = imgW - width end
+      if yB > imgH then yB = imgH; yA = imgH - height end
 
-      data[n] = image.crop(img, xA, yA, xB, yB)
-      -- image.display{image=data[n],zoom=2} -- DEBUG
+      local data = image.scale(image.crop(img, xA, yA, xB, yB), opt.outSize)
+      --win = image.display{image=data, win=win} -- DEBUG
+      image.savePNG(string.format('%s/%04d.png', outDir, n), data)
    end
-
-   local shuffle = torch.randperm(trSize + teSize)
-   for idx = 1, trSize do trainData.data[idx] = data[shuffle[idx]] end
-   for idx = 1, teSize do testData.data[idx] = data[shuffle[trSize+idx]] end
-
-   totalTrainData.data   = cat(totalTrainData.data, trainData.data)
-   totalTrainData.labels = cat(totalTrainData.labels, trainData.labels)
-   totalTrainData.size   = function() return (#totalTrainData.labels)[1] end
-   totalTestData.data    = cat(totalTestData.data, testData.data)
-   totalTestData.labels  = cat(totalTestData.labels, testData.labels)
-   totalTestData.size    = function() return (#totalTestData.labels)[1] end
 end
 
 -- Main program ----------------------------------------------------------------
--- Temporary dataset container
-local totalTrainData = {}
-local totalTestData = {}
-local myClasses = {}
 
 -- Iteratively loads all specified datasets or asks, if so desired
 local availableClasses = ls('../labels/')
 local l = 1
-if (classes == 'all') or (classes == 'ask') then -- Loads all or asks for it
+if (opt.classes == 'all') or (opt.classes == 'ask') then -- Loads all or asks for it
    for _, class in ipairs(availableClasses) do
       if opt.classes == 'ask' then
          io.write('Would you like to load ' .. class .. ' (y/[n])? ')
          if io.read() == 'y' then
-            loadDataset(class, l, totalTrainData, totalTestData, myClasses)
+            cropPatch(class, l)
             l = l + 1
          end
       else
-         loadDataset(class, l, totalTrainData, totalTestData, myClasses)
+         cropPatch(class, l)
          l = l + 1
       end
    end
 else -- Users specifies what to load from command line
-   for class in string.gmatch(classes, '%a+') do
-      loadDataset(class, l, totalTrainData, totalTestData, myClasses)
+   for class in string.gmatch(opt.classes, '%a+') do
+      cropPatch(class, l)
       l = l + 1
    end
 end
-
--- Saving myClasses
-os.execute('mkdir -p torch-data')
-torch.save('../torch-data/myClasses.t7', myClasses)
-
--- Visualising datasets --------------------------------------------------------
-if opt.plot then
-   -- display some examples:
-   shuffle = torch.randperm(totalTrainData:size())
-   showTrain = torch.Tensor(128, 3, height, width)
-   for i = 1,128 do showTrain[i] = totalTrainData.data[shuffle[i]] end
-   image.display{image=showTrain, nrow=16, zoom=2, legend = 'Train Data'}
-   shuffle = torch.randperm(totalTestData:size())
-   showTest = torch.Tensor(128, 3, height, width)
-   for i = 1,128 do showTest[i] = totalTestData.data[shuffle[i]] end
-   image.display{image=showTest, nrow=16, zoom=2, legend = 'Test Data'}
-end
-
-
--- Exports -------------------------------------------------------------------
-return {
-   trainData = totalTrainData,
-   testData = totalTestData
-}
