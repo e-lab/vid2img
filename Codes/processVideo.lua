@@ -17,16 +17,20 @@ video_decoder = require('libvideo_decoder')
 -- Sub-Fuction definition ------------------------------------------
 function VideoRead(videoPath)
    -- By Alf's test-frame.lua --------------------------------------
-   io.write('+ ' .. videoPath .. '\n')
+   io.write(' + ' .. videoPath .. '\n')
    status, height, width, length, fps =  video_decoder.init(videoPath)
 end
+
+-- Scaled coordinates
+local sHeight = 360
+local sWidth = 640
 
 function findMatch(xOld, yOld)
    local Delta = 20
    local execu = 1
    -- img size
    out_pic = 0
-   if xOld - Delta < 1 or yOld - Delta < 1 or xOld + x2 - x1 + Delta > width or yOld + y2 - y1 + Delta > height then
+   if xOld - Delta < 1 or yOld - Delta < 1 or xOld + x2 - x1 + Delta > sWidth or yOld + y2 - y1 + Delta > sHeight then
       execu = 0
       ui.frame_2.can_label.text = 'The searching area is greater than the input image! Re-draw the rectangle >:['
       out_pic = 1
@@ -37,6 +41,7 @@ function findMatch(xOld, yOld)
       for i = yOld-Delta, yOld+Delta do
          for j = xOld-Delta, xOld+Delta do
             -- sum function
+            --print(#SAD); print(#dst); print(xOld, yOld, Delta, width, height, x1, x2, y1, y2)
             SAD[i-yOld+Delta+1][j-xOld+Delta+1] = ((dst[{{}, {i, i+y2-y1}, {j, j+x2-x1}}]):long() - patch:long()):abs():sum()
          end
       end
@@ -144,7 +149,7 @@ function processVideo(v_class, vid)
          win:gbegin()
       end
       dst_bk = dst:clone()
-      dst = image.scale(dst, 640, 360)
+      dst = image.scale(dst, sWidth, sHeight)
       img_win = image.display{image = dst, win = win}
       qt.doevents()
       if (f == 0) then
