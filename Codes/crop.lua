@@ -28,7 +28,7 @@ if not opt then
 --classes  (default ask)        list the classes you'd like to load, or choose <all>
 --nbImgs   (default 1000)       number of patches
 --outSize  (default 224)        output size of patches
---outDir   (default ../Patches) ouput folder for patches
+--outDir   (default ../patches) ouput folder for patches
 ]]
 end
 
@@ -63,11 +63,11 @@ function cropPatch(class, l)
    end
 
    -- Create output folder
-   local outDir = opt.outDir .. class
+   local outDir = paths.concat(opt.outDir, class)
    paths.mkdir(outDir)
 
    -- Extracting dataset images from dumpend video's frames
-   print '==> Extracting training and testing samples'
+   print '==> Extracting training samples'
    local std = 10
    local fullBatches = math.floor(opt.nbImgs / #images)
    local batch = 0
@@ -81,6 +81,7 @@ function cropPatch(class, l)
       else
          idx = 1 + math.floor((#images - 1)/(opt.nbImgs - 1 - fullBatches * #images) * (n - fullBatches * #images - 1) + .5)
       end
+      if idx ~= idx then idx = 1 end
       if n % #images == 0 then batch = batch + 1 end
 
       -- Extracting information from image and its label
