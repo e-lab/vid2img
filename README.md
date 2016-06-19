@@ -48,3 +48,8 @@ Inside the folder there is already a folder named `exampleFolder` containing 4 v
 The images are saved in the correponding folder as specified by the file names.
  - `labels`: contains the coordinates of the selected object within each (not skipped) frame.
  - `patches`: contains the extracted patches
+
+
+### License
+
+MIT
